@@ -1,6 +1,6 @@
 # DSRWG-SentiModel
 Repository for scripts used for the Sentiment Analysis model with deep learning prototype for the Chatbot Analytics workstream in IA working group.
-Current prototype is a CNN based on this paper: https://arxiv.org/ftp/arxiv/papers/2006/2006.03541.pdf
+Current prototype is a CNN based on this [paper](https://arxiv.org/ftp/arxiv/papers/2006/2006.03541.pdf)
 
 ![image](https://user-images.githubusercontent.com/50050912/157023128-fa016fbe-f2c5-463e-b900-2120301690f2.png)
 
