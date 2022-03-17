@@ -17,4 +17,4 @@ Current prototype is a CNN based on this [paper](https://arxiv.org/ftp/arxiv/pap
 - The current initial prototype version has an accuracy on the test set of 0.843.
 
 ### Next Steps
-See: https://capgemini.sharepoint.com/:x:/r/sites/DataScienceResearchDSRWG/Shared%20Documents/General/project_tracker.xlsx?d=w0033b3549f974dbc89cb0a711a0c8e73&csf=1&web=1&e=x7JwJK
+See: [project tracker](https://capgemini.sharepoint.com/:x:/r/sites/DataScienceResearchDSRWG/Shared%20Documents/General/project_tracker.xlsx?d=w0033b3549f974dbc89cb0a711a0c8e73&csf=1&web=1&e=x7JwJK)
