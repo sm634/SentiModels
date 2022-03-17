@@ -17,6 +17,4 @@ Current prototype is a CNN based on this [paper](https://arxiv.org/ftp/arxiv/pap
 - The current initial prototype version has an accuracy on the test set of 0.843.
 
 ### Next Steps
-- Word2Vec generated embedding matrix has not yet been used to train the model. As shown in the paper referenced above, this should improve the model accuracy.
-- Trying out different optimizers could also be tested.
-- Trying out a different model (e.g. RNN with LSTM) could also be attempted.  
+See: https://capgemini.sharepoint.com/:x:/r/sites/DataScienceResearchDSRWG/Shared%20Documents/General/project_tracker.xlsx?d=w0033b3549f974dbc89cb0a711a0c8e73&csf=1&web=1&e=x7JwJK
