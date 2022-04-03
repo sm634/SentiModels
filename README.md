@@ -25,10 +25,12 @@ The following is the best scores achieved by the model when trained on individua
 
 
 Other constant (unchanged) hyperparameters:
+        
         <u>learning rate --0.001<u>
         <u>Optimizer --AdamOptimizer<u>
         <u>conv layers (provided in image and paper above)<u>
         <u>criterion --BinaryCrossEntropy<u>
 
+            
 ### Next Steps
 See: [project tracker](https://capgemini.sharepoint.com/:x:/r/sites/DataScienceResearchDSRWG/Shared%20Documents/General/project_tracker.xlsx?d=w0033b3549f974dbc89cb0a711a0c8e73&csf=1&web=1&e=x7JwJK)
