@@ -5,7 +5,7 @@ Current prototype is a CNN based on this [paper](https://arxiv.org/ftp/arxiv/pap
 ![image](https://user-images.githubusercontent.com/50050912/157023128-fa016fbe-f2c5-463e-b900-2120301690f2.png)
 
 ### Dataset
-The datasets used to train, validate and test the model(s) are listed below:
+- The datasets used to train, validate and test the model(s) are listed below:
     
     <u>IMDB reviews<u>
     - https://www.kaggle.com/lakshmi25npathi/imdb-dataset-of-50k-movie-reviews
