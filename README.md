@@ -20,10 +20,7 @@ Current prototype is a CNN based on this [paper](https://arxiv.org/ftp/arxiv/pap
 
 ### Result
 - The following is the best scores achieved by the model when trained on individual datasets with the sentence sequence hyperparameter (changes to other hyperparameters did not have as much of an impact):
-      Dataset	Test Score	sentence sequence (hp)	training size	validation/test size
-IMDB movie reviews (combined)	0.91	500	67500	3750
-Amazon Polarity 	0.88	250	1,700,000	50,000
-Sentiment140	0.79	27	1,400,000	200,000
+      
 ![image](https://user-images.githubusercontent.com/50050912/161445853-697bfb52-497e-44c3-a66f-401a79530b34.png)
 
 
