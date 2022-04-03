@@ -18,6 +18,17 @@ Current prototype is a CNN based on this [paper](https://arxiv.org/ftp/arxiv/pap
     - http://help.sentiment140.com/for-students
       
 
+### Set-up and Processing
+- Utils.ipynb provides the functions used to preprocess and prepare the text data into vector representation to feed into the embedding matrix and cnn. It also has the function for applying a trained model's forward pass to make an inferece/prediction.
+
+- SentimentScript-CNN-amapol.ipynb provides a sample notebook to run through the preprocessing, training, testing and inference of the model.
+
+- SentimentCNN_model.ipynb has the prototype CNN model.
+        
+- TrainTestSentimentCNN.ipynb has the train and test procedure.
+
+- models-comparison.ipynb has a sample notebook of model (trained across 4 datasets) against sample test sets against vadersentiment and textblob.
+        
 ### Result
 - The following is the best scores achieved by the model when trained on individual datasets with the sentence sequence hyperparameter (changes to other hyperparameters did not have as much of an impact):
      
