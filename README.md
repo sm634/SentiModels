@@ -5,16 +5,27 @@ Current prototype is a CNN based on this [paper](https://arxiv.org/ftp/arxiv/pap
 ![image](https://user-images.githubusercontent.com/50050912/157023128-fa016fbe-f2c5-463e-b900-2120301690f2.png)
 
 ### Dataset
-- The dataset used for prototype is combined from two separate movie review datasets (50k records and 25k records) which gives a total of 75k records for training, validation and testing. The datasets were used in the orginal paper and taken from:
-  - https://www.kaggle.com/lakshmi25npathi/imdb-dataset-of-50k-movie-reviews
-  - https://www.kaggle.com/c/word2vec-nlp-tutorial/data
-
-### Current Set-up
-- The two datasets need to be combined. This was simply done by using pandas as they both contain a 'review' and a 'sentiment' column. The sentiments need to be recoded to 1 (for positive) and 0 (for negative).
-- Simply run the SentimentScript-CNN once you have loaded in the data. Uncomment the cells with the 'train' and 'test' codes to save and use the weights/parameters for any inference/prediction task you need. 
+- The datasets used to train, validate and test the model(s) are listed below:
+    
+    <u>IMDB reviews<u>
+    - https://www.kaggle.com/lakshmi25npathi/imdb-dataset-of-50k-movie-reviews
+    - https://www.kaggle.com/c/word2vec-nlp-tutorial/data
+  
+    <u>Amazon reviews polarity and Yelp reviews polarity datasets<u>
+    - https://course.fast.ai/datasets#nlp
+  
+    <u>Sentiment140 tweets data<u>
+    - http://help.sentiment140.com/for-students
+      
 
 ### Result
-- The current initial prototype version has an accuracy on the test set of 0.843.
+- The following is the best scores achieved by the model when trained on individual datasets with the sentence sequence hyperparameter (changes to other hyperparameters did not have as much of an impact):
+      Dataset	Test Score	sentence sequence (hp)	training size	validation/test size
+IMDB movie reviews (combined)	0.91	500	67500	3750
+Amazon Polarity 	0.88	250	1,700,000	50,000
+Sentiment140	0.79	27	1,400,000	200,000
+![image](https://user-images.githubusercontent.com/50050912/161445853-697bfb52-497e-44c3-a66f-401a79530b34.png)
+
 
 ### Next Steps
 See: [project tracker](https://capgemini.sharepoint.com/:x:/r/sites/DataScienceResearchDSRWG/Shared%20Documents/General/project_tracker.xlsx?d=w0033b3549f974dbc89cb0a711a0c8e73&csf=1&web=1&e=x7JwJK)
