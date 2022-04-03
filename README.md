@@ -19,7 +19,7 @@ Current prototype is a CNN based on this [paper](https://arxiv.org/ftp/arxiv/pap
       
         
 ### Result
-The following is the best scores achieved by the model when trained on individual datasets with the sentence sequence length hyperparameter (changes to other hyperparameters did not have as much of an impact):
+The following is the best scores achieved by the model so far when trained on individual datasets with the sentence sequence length hyperparameter (changes to other hyperparameters did not have as much of an impact):
      
 ![image](https://user-images.githubusercontent.com/50050912/161446073-a0860c33-2aea-410d-8ec7-666d7ed32a33.png)
 
