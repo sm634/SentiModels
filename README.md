@@ -26,10 +26,11 @@ The following is the best scores achieved by the model so far when trained on in
 
 Other constant (unchanged) hyperparameters:
         
-        <u>learning rate --0.001<u>
-        <u>Optimizer --AdamOptimizer<u>
-        <u>conv layers (provided in image and paper above)<u>
-        <u>criterion --BinaryCrossEntropy<u>
+        learning rate --0.001
+        Optimizer --AdamOptimizer
+        conv layers (provided in image and paper above)
+        criterion --BinaryCrossEntropy
+        embedding_dimension --300
 
             
 ### Next Steps
