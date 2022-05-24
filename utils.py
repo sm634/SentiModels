@@ -5,6 +5,7 @@ from nltk.tokenize import word_tokenize
 from string import punctuation
 from collections import Counter
 import random
+import torch
 
 
 # a function that takes in raw text and retuns tokenized and lemmatized list of words after applying a number
@@ -92,7 +93,7 @@ def word_to_int(input_text: iter, vocab_to_int: dict, token_lem=False) -> iter:
     A function to be used for encoding text to integers for prediction (assigning unknown words).
     Return: list of integers representing words in text
     """
-    if token_lem == True:
+    if token_lem is True:
         standardised_text = tokenize_lemmatize(input_text)
     else:
         standardised_text = input_text.split()

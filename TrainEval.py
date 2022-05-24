@@ -10,6 +10,8 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
+from helpers import logger
+
 
 def train_sentimentCNN(model, train_loader, valid_loader, criterion, optimizer,
                        save_model_as: str, n_epochs=5, valid_loss_min=np.Inf):
@@ -51,10 +53,10 @@ def train_sentimentCNN(model, train_loader, valid_loader, criterion, optimizer,
                 train_loss += loss.item() * data.size(0)
 
         except:
-            print("train fail index: ", counter)
+            logger.info("train fail index: ", counter)
 
         t2 = (time() - t1) / 60
-        print("Epoch {}".format(epoch) + " completed in: {:.3f}".format(t2), " minutes")
+        logger.info("Epoch {}".format(epoch) + " completed in: {:.3f}".format(t2), " minutes")
 
         ######################
         # validate the model #
@@ -73,19 +75,19 @@ def train_sentimentCNN(model, train_loader, valid_loader, criterion, optimizer,
                 # update average validation loss
                 valid_loss += loss.item() * data.size(0)
         except:
-            print("valid fail index: ", counter)
+            logger.info("valid fail index: ", counter)
 
         # calculate average losses
         train_loss = train_loss / len(train_loader.sampler)
         valid_loss = valid_loss / len(valid_loader.sampler)
 
-        # print training/validation statistics
-        print('Epoch: {} \tTraining Loss: {:.6f} \tValidation Loss: {:.6f}'.format(
+        # logger.info training/validation statistics
+        logger.info('Epoch: {} \tTraining Loss: {:.6f} \tValidation Loss: {:.6f}'.format(
             epoch, train_loss, valid_loss))
 
         # save model if validation loss has decreased
         if valid_loss <= valid_loss_min:
-            print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(
+            logger.info('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(
                 valid_loss_min,
                 valid_loss))
             torch.save(model.state_dict(), save_model_as + '.pt')
@@ -126,7 +128,7 @@ def test_sentimentCNN(model, test_loader, criterion):
             all_targets = torch.cat((all_targets, target.cpu()))
 
     except:
-        print(counter)
+        logger.info(counter)
 
     all_targets = all_targets.detach().numpy()
     all_preds = all_preds.detach().numpy()
