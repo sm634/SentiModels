@@ -1,0 +1,6 @@
+{
+    "logging" : {
+        "logger_location" : "DSRWG-SentiModel.log",
+        "logger_level" : "INFO"
+    }
+}
