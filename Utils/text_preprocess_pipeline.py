@@ -1,16 +1,12 @@
 """
 Run this to prepare a sentiment analysis dataset to feed into model.
 : Input will be the text data and its associated labels.
-: Returns embeddings of the data with the chosen dimension to feed into the model.
-    - will also include the option to train the embeddings using gensim.
+: Returns vector encoded tensors of the data to feed into the model.
+    - Future versions: will also include the option to train the embeddings using gensim.
 """
 import pandas as pd
 import torch
 from text_preprocessor import TextVectorizer, recode_sentiment_label
-import itertools
-
-input_path = 'C:/Users/samukhia/data-science-research-wg/DSRWG-SentiModel/data/imdb_subset.csv'
-output_path = 'C:/Users/samukhia/data-science-research-wg/DSRWG-SentiModel/data/imdb_subset_tensor.pt'
 
 
 def prepare_tensor_data(from_path, to_path, text_col='review', label_col='sentiment'):
@@ -21,13 +17,11 @@ def prepare_tensor_data(from_path, to_path, text_col='review', label_col='sentim
     :param to_path: the path and file_name to save the output tensor dataset. Save as a .pt file to load using
     torch.utils.data DataLoader.
     :param text_col: the name of the column where the text data is stored.
-    :param label_col: the name of the column where the labels are stored.
+    :param label_col: the name of the column where the labels are stored. These have to be numerical (int) and the
+    pipeline expects any non-numerical encoded labels to be encoded.
     :return: save the output torch.TensorDataset in the provided to_path.
     """
     data = pd.read_csv(from_path, sep=',').dropna(how="any")
-
-    # recoding labels.
-    data[label_col] = data[label_col].apply(lambda x: recode_sentiment_label(x))
 
     # extract text and label data to work with.
     text_data = data[text_col].to_list()
