@@ -6,8 +6,7 @@ from sklearn.metrics import (
     precision_score,
     accuracy_score,
     recall_score,
-    f1_score,
-    roc_auc_score,
+    f1_score
 )
 
 from helpers import logger
