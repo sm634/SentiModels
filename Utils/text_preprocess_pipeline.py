@@ -6,7 +6,7 @@ Run this to prepare a sentiment analysis dataset to feed into model.
 """
 import pandas as pd
 import torch
-from text_preprocessor import TextVectorizer, recode_sentiment_label
+from text_preprocessor import TextVectorizer
 
 
 def prepare_tensor_data(from_path, to_path, text_col='review', label_col='sentiment'):
