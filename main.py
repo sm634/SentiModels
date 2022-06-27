@@ -1,12 +1,10 @@
 import pandas as pd
 import numpy as np
 from torch import nn
-from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 import json
 
-from utils import preprocess, recode_sentiment, create_lookup_tables, pad_features
 from model.SentimentCNN import SentimentCNN
 from TrainEval import train_sentimentCNN, test_sentimentCNN
 from helpers import logger
@@ -19,7 +17,7 @@ def main():
     output_size = 1
     batch_size = 4096
 
-    reviews_data = pd.read_csv('Data/amazon_review_polarity/train.csv', encoding='latin-1')
+    reviews_data = pd.read_csv('data/amazon_review_polarity/train.csv', encoding='latin-1')
 
     reviews_data.columns = ['sentiment', 'title', 'review']
 
@@ -50,10 +48,10 @@ def main():
 
     word_count, vocab_int, int_vocab = create_lookup_tables(tokenized_text)
 
-    with open('Data/amazon_review_polarity/Amazon_polarity_subset2m_vocab_to_int.json', 'w') as f:
+    with open('data/amazon_review_polarity/Amazon_polarity_subset2m_vocab_to_int.json', 'w') as f:
         json.dump(vocab_int, f)
 
-    with open('Data/amazon_review_polarity/Amazon_polarity_subset2m_int_to_vocab.json', 'w') as fp:
+    with open('data/amazon_review_polarity/Amazon_polarity_subset2m_int_to_vocab.json', 'w') as fp:
         json.dump(int_vocab, fp)
 
     # NO LEMMATIZATION: numerical encoding
@@ -71,8 +69,6 @@ def main():
     ##########################################
 
     review_lens = [len(review) for review in reviews_ints]
-    review_len_mean = np.array(review_lens).mean()
-    review_len_std = np.array(review_lens).std()
 
     # Parameters
     try:
@@ -109,12 +105,12 @@ def main():
 
     # save the tensors for later use (if not going to preprocess).
 
-    torch.save(torch.from_numpy(train_x), "Data/amazon_review_polarity/Amazon_polarity_subset2m_trainX.pt")
-    torch.save(torch.from_numpy(train_y), "Data/amazon_review_polarity/Amazon_polarity_subset2m_trainy.pt")
-    torch.save(torch.from_numpy(val_x), "Data/amazon_review_polarity/Amazon_polarity_subset2m_valX.pt")
-    torch.save(torch.from_numpy(val_y), "Data/amazon_review_polarity/Amazon_polarity_subset2m_valy.pt")
-    torch.save(torch.from_numpy(test_x), "Data/amazon_review_polarity/Amazon_polarity_subset2m_testX.pt")
-    torch.save(torch.from_numpy(test_y), "Data/amazon_review_polarity/Amazon_polarity_subset2m_testy.pt")
+    torch.save(torch.from_numpy(train_x), "data/amazon_review_polarity/Amazon_polarity_subset2m_trainX.pt")
+    torch.save(torch.from_numpy(train_y), "data/amazon_review_polarity/Amazon_polarity_subset2m_trainy.pt")
+    torch.save(torch.from_numpy(val_x), "data/amazon_review_polarity/Amazon_polarity_subset2m_valX.pt")
+    torch.save(torch.from_numpy(val_y), "data/amazon_review_polarity/Amazon_polarity_subset2m_valy.pt")
+    torch.save(torch.from_numpy(test_x), "data/amazon_review_polarity/Amazon_polarity_subset2m_testX.pt")
+    torch.save(torch.from_numpy(test_y), "data/amazon_review_polarity/Amazon_polarity_subset2m_testy.pt")
 
     #######################
     # Instantiate the model

@@ -4,5 +4,9 @@
     <content url="file://$MODULE_DIR$" />
     <orderEntry type="jdk" jdkName="Python 3.9 (pythonProject)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="PycharmProjects" />
+    <orderEntry type="module" module-name="DPCNN" />
+    <orderEntry type="module" module-name="train" />
+    <orderEntry type="module" module-name="EVCS-optimisation" />
   </component>
 </module>

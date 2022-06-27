@@ -2,7 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/../DPCNN/.idea/DPCNN.iml" filepath="$PROJECT_DIR$/../DPCNN/.idea/DPCNN.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/DSRWG-SentiModel.iml" filepath="$PROJECT_DIR$/.idea/DSRWG-SentiModel.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../EVCS-optimisation/.idea/EVCS-optimisation.iml" filepath="$PROJECT_DIR$/../EVCS-optimisation/.idea/EVCS-optimisation.iml" />
+      <module fileurl="file://$USER_HOME$/PycharmProjects/.idea/PycharmProjects.iml" filepath="$USER_HOME$/PycharmProjects/.idea/PycharmProjects.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../DPCNN/data/train/.idea/train.iml" filepath="$PROJECT_DIR$/../DPCNN/data/train/.idea/train.iml" />
     </modules>
   </component>
 </project>
