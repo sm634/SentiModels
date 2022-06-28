@@ -9,7 +9,8 @@ import torch
 from text_preprocessor import TextVectorizer
 
 
-def prepare_tensor_data(from_path, to_path, text_col='review', label_col='sentiment'):
+def prepare_tensor_data(from_path, to_path, text_col='review', label_col='sentiment', subsample=True,
+                        max_vocab_size=20000, sequence_length=40, tokenizer='nltk'):
     """
     Function to run pipeline that turns text, label dataset -> tensor dataset.
     :param from_path: the path and file to get the input dataset. Currently only reads from .csv file
@@ -19,6 +20,10 @@ def prepare_tensor_data(from_path, to_path, text_col='review', label_col='sentim
     :param text_col: the name of the column where the text data is stored.
     :param label_col: the name of the column where the labels are stored. These have to be numerical (int) and the
     pipeline expects any non-numerical encoded labels to be encoded.
+    :param subsample: Indicate if subsampling the vocab size to get rid of frequent but noisy words (e.g. 'and', 'is')
+    :param max_vocab_size: The maximum number of unique word tokens to be used, dependent on subsample=True.
+    :param sequence_length: The length of the vector, once converted from text.
+    :param tokenizer: the type of tokenizer to be used. Currently two options: ['standard', 'nltk'].
     :return: save the output torch.TensorDataset in the provided to_path.
     """
     data = pd.read_csv(from_path, sep=',').dropna(how="any")
@@ -29,15 +34,15 @@ def prepare_tensor_data(from_path, to_path, text_col='review', label_col='sentim
 
     vectorizer = TextVectorizer()
     # When creating vocab out of tokenizing, use nltk word_tokenizer.
-    vectorizer.tokenizer = 'nltk'
+    vectorizer.tokenizer = tokenizer
     # create vocabulary using the text data.
-    vectorizer.make_vocabulary(text_data, subsample=True, max_vocab_size=40000)
+    vectorizer.make_vocabulary(text_data, subsample=subsample, max_vocab_size=max_vocab_size)
 
     # encode the text data into ints from the created vocabulary lookup table.
     text_int_encoding = [vectorizer.encode(text) for text in text_data]
 
     # pad the text_int_encoding.
-    text_int_encoding = vectorizer.pad_features(text_int_encoding, sequence_length=40)
+    text_int_encoding = vectorizer.pad_features(text_int_encoding, sequence_length=sequence_length)
 
     # create the tensor dataset and save it in to_path.
     torch.save(vectorizer.create_tensor_dataset(text_int_encoding, labels), to_path)
