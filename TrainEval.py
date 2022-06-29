@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from time import time
+import os
 from sklearn.metrics import (
     precision_score,
     accuracy_score,
@@ -9,7 +10,8 @@ from sklearn.metrics import (
     f1_score
 )
 
-from helpers import logger
+# get root dir path.
+root_dir = os.getcwd().replace('\\', '/') + '/'
 
 
 def train_sentimentCNN(model, train_loader, valid_loader, criterion, optimizer,
@@ -27,69 +29,62 @@ def train_sentimentCNN(model, train_loader, valid_loader, criterion, optimizer,
         train_loss = 0.0
         valid_loss = 0.0
 
-        try:
-            ###################
-            # train the model #
-            ###################
-            model.train()
-            counter = 0
-            for data, target in train_loader:
-                # move tensors to GPU if CUDA is available
-                counter += 1
+        ###################
+        # train the model #
+        ###################
+        model.train()
+        counter = 0
+        for data, target in train_loader:
+            # move tensors to GPU if CUDA is available
+            counter += 1
 
-                # clear the gradients of all optimized variables
-                optimizer.zero_grad()
-                # forward pass: compute predicted outputs by passing inputs to the model
-                output = model(data).reshape(target.shape[0], )
-                target = target.to(torch.float32)
-                # calculate the batch loss
-                loss = criterion(output, target)
-                # backward pass: compute gradient of the loss with respect to model parameters
-                loss.backward()
-                # perform a single optimization step (parameter update)
-                optimizer.step()
-                # update training loss
-                train_loss += loss.item() * data.size(0)
-
-        except:
-            logger.info("train fail index: ", counter)
+            # clear the gradients of all optimized variables
+            optimizer.zero_grad()
+            # forward pass: compute predicted outputs by passing inputs to the model
+            output = model(data).reshape(target.shape[0], )
+            target = target.to(torch.float32)
+            # calculate the batch loss
+            loss = criterion(output, target)
+            # backward pass: compute gradient of the loss with respect to model parameters
+            loss.backward()
+            # perform a single optimization step (parameter update)
+            optimizer.step()
+            # update training loss
+            train_loss += loss.item() * data.size(0)
 
         t2 = (time() - t1) / 60
-        logger.info("Epoch {}".format(epoch) + " completed in: {:.3f}".format(t2), " minutes")
+        print("Epoch {}".format(epoch) + " completed in: {:.3f}".format(t2), " minutes")
 
         ######################
         # validate the model #
         ######################
-        try:
-            model.eval()
-            counter = 0
-            for data, target in valid_loader:
-                counter += 1
+        model.eval()
+        counter = 0
+        for data, target in valid_loader:
+            counter += 1
 
-                # forward pass: compute predicted outputs by passing inputs to the model
-                output = model(data).reshape(target.shape[0], )
-                target = target.to(torch.float32)
-                # calculate the batch loss
-                loss = criterion(output, target)
-                # update average validation loss
-                valid_loss += loss.item() * data.size(0)
-        except:
-            logger.info("valid fail index: ", counter)
+            # forward pass: compute predicted outputs by passing inputs to the model
+            output = model(data).reshape(target.shape[0], )
+            target = target.to(torch.float32)
+            # calculate the batch loss
+            loss = criterion(output, target)
+            # update average validation loss
+            valid_loss += loss.item() * data.size(0)
 
         # calculate average losses
         train_loss = train_loss / len(train_loader.sampler)
         valid_loss = valid_loss / len(valid_loader.sampler)
 
         # logger.info training/validation statistics
-        logger.info('Epoch: {} \tTraining Loss: {:.6f} \tValidation Loss: {:.6f}'.format(
+        print('Epoch: {} \tTraining Loss: {:.6f} \tValidation Loss: {:.6f}'.format(
             epoch, train_loss, valid_loss))
 
         # save model if validation loss has decreased
         if valid_loss <= valid_loss_min:
-            logger.info('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(
+            print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(
                 valid_loss_min,
                 valid_loss))
-            torch.save(model.state_dict(), save_model_as + '.pt')
+            torch.save(model.state_dict(), root_dir + 'model_parameters/' + save_model_as + '.pt')
             valid_loss_min = valid_loss
 
     return None
@@ -109,25 +104,23 @@ def test_sentimentCNN(model, test_loader, criterion):
 
     model.eval()
     # iterate over test data
-    try:
-        counter = 0
-        for inputs, target in test_loader:
-            counter += 1
+    counter = 0
+    for inputs, target in test_loader:
+        counter += 1
 
-            # get predicted outputs
-            output = model(inputs).reshape(target.shape[0], )
+        # get predicted outputs
+        output = model(inputs).reshape(target.shape[0], )
 
-            target = target.to(torch.float32)  # convert target to float
+        target = target.to(torch.float32)  # convert target to float
 
-            # convert output probabilities to predicted class (0 or 1)
-            pred = torch.round(output.squeeze())  # rounds to the nearest integer
+        # convert output probabilities to predicted class (0 or 1)
+        pred = torch.round(output.squeeze())  # rounds to the nearest integer
 
-            # concatenate the preds and labels from the test_loader to get them all
-            all_preds = torch.cat((all_preds, pred.cpu()))
-            all_targets = torch.cat((all_targets, target.cpu()))
+        # concatenate the preds and labels from the test_loader to get them all
+        all_preds = torch.cat((all_preds, pred.cpu()))
+        all_targets = torch.cat((all_targets, target.cpu()))
 
-    except:
-        logger.info(counter)
+    print(counter)
 
     all_targets = all_targets.detach().numpy()
     all_preds = all_preds.detach().numpy()

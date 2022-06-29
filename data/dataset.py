@@ -25,7 +25,7 @@ class TextDataset(Dataset):
         : param path: the path to the data directory
         : param labels: expects type int or list of ints as label
         : param split: get either the train, test or val set. Currently expects a directory for a dataset with three
-        separate files for train.csv, test.csv and val.csv.
+        separate files for train.csv, test.csv and valid.csv.
         """
 
     def __getitem__(self, index):

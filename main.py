@@ -1,147 +1,83 @@
-import pandas as pd
-import numpy as np
+from Utils.text_preprocess_pipeline import prepare_tensor_data
 from torch import nn
 import torch
-from torch.utils.data import TensorDataset, DataLoader
-import json
+from torch.utils.data import DataLoader
+import argparse
 
-from model.SentimentCNN import SentimentCNN
-from TrainEval import train_sentimentCNN, test_sentimentCNN
-from helpers import logger
+from model.SentimentCNN import BaseSentimentCNN
+from TrainEval import train_sentimentCNN
+# from helpers import logger
+from config import Config
 
 
 def main():
-    # Some hyperparameters that will need to be configured.
-    embedding_size = 300
-    seq_length = 250
-    output_size = 1
-    batch_size = 4096
+    torch.manual_seed(1)
 
-    reviews_data = pd.read_csv('data/amazon_review_polarity/train.csv', encoding='latin-1')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--lr', type=float, default=0.01)
+    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--epoch', type=int, default=5)
+    parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--out_channel', type=int, default=2)
+    parser.add_argument('--vocab_size', type=int, default=20000)
+    parser.add_argument('--preprocess', type=bool, default=False)
+    parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--train_set', type=str, default='train.csv')
+    parser.add_argument('--valid_set', type=str, default='valid.csv')
+    args = parser.parse_args()
 
-    reviews_data.columns = ['sentiment', 'title', 'review']
+    torch.manual_seed(args.seed)
 
-    reviews_data['sentiment'] = reviews_data['sentiment'].apply(lambda x: recode_sentiment(x))
+    # Create the configuration
+    config = Config(sequence_length=40,
+                    batch_size=args.batch_size,
+                    vocab_size=args.vocab_size,
+                    learning_rate=args.lr,
+                    epoch=args.epoch)
 
-    pos_reviews = reviews_data[reviews_data['sentiment'] == 1].sample(1000000)
-    neg_reviews = reviews_data[reviews_data['sentiment'] == 0].sample(1000000)
+    #####################
+    # load in tensor data
+    #####################
 
-    reviews_data = pd.concat([pos_reviews, neg_reviews], axis=0).sample(frac=1)
+    # preprocess csv to prepare tensors for model input
+    train_set = args.train_set
+    valid_set = args.valid_set
 
-    reviews_data = reviews_data.dropna()
+    if args.preprocess:
+        train_loader = prepare_tensor_data(from_path='data/' + train_set, to_path='data/train.pt',
+                                           batch_size=config.batch_size, text_col='review', label_col='sentiment',
+                                           subsample=True, max_vocab_size=config.vocab_size,
+                                           sequence_length=config.sequence_length)
+        valid_loader = prepare_tensor_data(from_path='data/' + valid_set, to_path='data/valid.pt',
+                                           batch_size=config.batch_size, text_col='review',
+                                           label_col='sentiment', subsample=True, max_vocab_size=config.vocab_size,
+                                           sequence_length=config.sequence_length)
+    else:
+        # otherwise the file_name passed in the argument should be a .pt file with saved tensors.
+        train_loader = DataLoader(args.file_name, batch_size=config.batch_size, drop_last=True)
+        valid_loader = DataLoader(args.valid_set, batch_size=config.batch_size, drop_last=True)
 
-    # get reviews in a list from the pd.Series
-    reviews_list = reviews_data['review'].to_list()
-
-    senti_list = reviews_data['sentiment'].to_list()
-
-    # preprocess the reviews in accordance to the preprocess function.
-    preprocessed_reviews_list = [preprocess(review) for review in reviews_list]
-
-    # tokenize text and without stemmatizing it to preprocess more
-    tokenized_text = ' '.join(
-        preprocessed_reviews_list).split()  # stem the tokenized words and replace any extra white spaces.
-
-    ################
-    # Encoding words
-    ################
-
-    word_count, vocab_int, int_vocab = create_lookup_tables(tokenized_text)
-
-    with open('data/amazon_review_polarity/Amazon_polarity_subset2m_vocab_to_int.json', 'w') as f:
-        json.dump(vocab_int, f)
-
-    with open('data/amazon_review_polarity/Amazon_polarity_subset2m_int_to_vocab.json', 'w') as fp:
-        json.dump(int_vocab, fp)
-
-    # NO LEMMATIZATION: numerical encoding
-    reviews_ints = []
-    for review in preprocessed_reviews_list:
-        reviews_ints.append([vocab_int[word] for word in review.split()])
-
-    indices_to_drop = [i for i, ints in enumerate(reviews_ints) if len(ints) == 0]
-
-    reviews_ints = [review for i, review in enumerate(reviews_ints) if i not in indices_to_drop]
-    senti_list = [senti for i, senti in enumerate(senti_list) if i not in indices_to_drop]
-
-    ##########################################
-    # hyperparameter config, Padding Sequences
-    ##########################################
-
-    review_lens = [len(review) for review in reviews_ints]
-
-    # Parameters
-    try:
-        vocab_size = len(vocab_int) + 1  # for the 0 padding + our word tokens
-    except:
-        vocab_size = vocab_size
-
-    features = pad_features(reviews_ints, seq_length)
-    sentiments = np.array(senti_list)
-
-    ####################################################################################
-    # split data into training, validation, and test data (features and labels, x and y)
-    ####################################################################################
-
-    split_frac = 0.95
-
-    split_idx = int(len(features) * split_frac)
-    train_x, remaining_x = features[:split_idx], features[split_idx:]
-    train_y, remaining_y = sentiments[:split_idx], sentiments[split_idx:]
-
-    test_idx = int(len(remaining_x) * 0.5)
-    val_x, test_x = remaining_x[:test_idx], remaining_x[test_idx:]
-    val_y, test_y = remaining_y[:test_idx], remaining_y[test_idx:]
-
-    # create Tensor datasets
-    train_data = TensorDataset(torch.from_numpy(train_x), torch.from_numpy(train_y))
-    valid_data = TensorDataset(torch.from_numpy(val_x), torch.from_numpy(val_y))
-    test_data = TensorDataset(torch.from_numpy(test_x), torch.from_numpy(test_y))
-
-    # dataloaders: make sure the SHUFFLE your training data
-    train_loader = DataLoader(train_data, shuffle=True, batch_size=batch_size)
-    valid_loader = DataLoader(valid_data, shuffle=True, batch_size=batch_size)
-    test_loader = DataLoader(test_data, shuffle=True, batch_size=batch_size)
-
-    # save the tensors for later use (if not going to preprocess).
-
-    torch.save(torch.from_numpy(train_x), "data/amazon_review_polarity/Amazon_polarity_subset2m_trainX.pt")
-    torch.save(torch.from_numpy(train_y), "data/amazon_review_polarity/Amazon_polarity_subset2m_trainy.pt")
-    torch.save(torch.from_numpy(val_x), "data/amazon_review_polarity/Amazon_polarity_subset2m_valX.pt")
-    torch.save(torch.from_numpy(val_y), "data/amazon_review_polarity/Amazon_polarity_subset2m_valy.pt")
-    torch.save(torch.from_numpy(test_x), "data/amazon_review_polarity/Amazon_polarity_subset2m_testX.pt")
-    torch.save(torch.from_numpy(test_y), "data/amazon_review_polarity/Amazon_polarity_subset2m_testy.pt")
+    print('data loaded')
 
     #######################
     # Instantiate the model
     #######################
 
-    model = SentimentCNN(vocab_size, output_size, embedding_size, batch_size, seq_length)
-    logger.info(model)
+    model = BaseSentimentCNN(config)
+    print(model)
+
+    # loss and optimization functions
+    lr = config.lr  # learning rate to be used for the optimizer.
+
+    criterion = nn.BCELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     #################
     # Train the model
     #################
 
-    # loss and optimization functions
-    lr = 0.001  # learning rate to be used for the optimizer.
-
-    criterion = nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-
-    # #### Import the train model function from TrainTestSentimentCNN ipynb
-
     train_sentimentCNN(model, train_loader, valid_loader, criterion, optimizer,
-                       save_model_as='Sentiment_CNN_subset2m_amazon_pol', n_epochs=5)
-
-    # load the model with the trained parameters/weight that performed best in validation.
-    model.load_state_dict(torch.load('Sentiment_CNN_subset2m_amazon_pol.pt'))
-
-    ################
-    # TEST THE MODEL
-    ################
-
-    test_sentimentCNN(model, test_loader, criterion)
+                       save_model_as='imdb_subset_params', n_epochs=config.epoch)
 
 
 if __name__ == "__main__":
