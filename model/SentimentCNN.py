@@ -2,46 +2,47 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class SentimentCNN(nn.Module):
+class BaseSentimentCNN(nn.Module):
     """
-    The CNN prototype model used for sentiment analysis
+    The base CNN prototype model for sentiment classification
     """
 
-    def __init__(self, vocab_size, output_size, embedding_dim, batch_size, seq_length):
-        super(SentimentCNN, self).__init__()
+    def __init__(self, config):
+        super(BaseSentimentCNN, self).__init__()
         """
         :vocab_size: [int] number of words to embed to index from lookup table.
-        :output_size: [int] this will be 1 as only a single sigmoid transformation output will be provided per input.
         :embedding_dim: [int] the vector dimension size representing a word in the embedding matrix.
         :batch_size: [int] the input batch sample size.
         :seq_length: [int] the fixed sentence length of words (padded or trimmed) to feed the conv layer.
+        :dropout: the probability of dropout
         """
-
+        self.config = config
         # embedding layer
-        self.embedding_dim = embedding_dim
-        self.vocab_size = vocab_size
-        self.batch_size = batch_size
-        self.seq_length = seq_length
+        self.embedding_dim = config.word_embedding_dimension
+        self.vocab_size = config.vocab_size
+        self.batch_size = config.batch_size
+        self.seq_length = config.sequence_length
+        self.dropout = config.dropout
 
-        self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
+        self.embedding = nn.Embedding(self.vocab_size, self.embedding_dim, padding_idx=0)
 
         # convolution layer 1
-        self.conv1 = nn.Conv1d(seq_length, 64, 3)
+        self.conv1 = nn.Conv1d(in_channels=self.seq_length, out_channels=64, kernel_size=3)
         # convolution layer 2
-        self.conv2 = nn.Conv1d(64, 32, 3)
+        self.conv2 = nn.Conv1d(in_channels=64, out_channels=32, kernel_size=3)
         # max pooling layer
-        self.pool1 = nn.MaxPool1d(3, 3)
+        self.pool1 = nn.MaxPool1d(kernel_size=3, stride=3)
         # convolution layer 3
-        self.conv3 = nn.Conv1d(32, 16, 3)
+        self.conv3 = nn.Conv1d(in_channels=32, out_channels=16, kernel_size=3)
         # convolution layer 4
-        self.conv4 = nn.Conv1d(16, 8, 3)
+        self.conv4 = nn.Conv1d(in_channels=16, out_channels=8, kernel_size=3)
         # global averaging pool.
         self.avgpool = nn.AvgPool1d(94)
 
         # drop out
-        self.dropout = nn.Dropout(0.2)
+        self.dropout = nn.Dropout(self.dropout)
         # output to fully connected layer.
-        self.fc = nn.Linear(8, output_size)
+        self.fc = nn.Linear(8, 1)
         # sigmoid transform of output
         self.sig = nn.Sigmoid()
 
@@ -58,7 +59,7 @@ class SentimentCNN(nn.Module):
         x = F.relu(self.conv4(x))
         x = self.avgpool(x)
 
-        #         # flattening the output of the final pooling layer to feed the fully connected layer.
+        # flattening the output of the final pooling layer to feed the fully connected layer.
         x = x.view(x.shape[0] * x.shape[2], -1)
         # dropout
         x = self.dropout(x)

@@ -186,8 +186,8 @@ class TextVectorizer:
         self.tensor_dataset = TensorDataset(dataset_x, dataset_y)
         return self.tensor_dataset
 
-    def load_tensor_data(self):
-        return DataLoader(self.tensor_dataset)
+    def load_tensor_data(self, batch_size, drop_last=True):
+        return DataLoader(self.tensor_dataset, batch_size=batch_size, drop_last=drop_last)
 
 
 def recode_sentiment_label(label: str, neg_label='negative', pos_label='positive'):
