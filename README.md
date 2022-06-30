@@ -15,7 +15,7 @@ This is set up to take data from the 'data' repository, by default it will take 
 providing train and valid loss. It will then save the parameter values in the 'model_parameter' folder for the param configuration that achieved the lowest
 valid loss score.
 
-To run the model training script on the dataset of your choice, run the command with the following params:
+To run the model training script on the dataset of your choice, run the command with the following params, replacing the arguments input with your file name:
 
     - python main.py --preprocessor True --train_set <you-train-data-file-name.csv> --valid_set <your-valid-data-file-name.csv>
 
