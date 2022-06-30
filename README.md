@@ -4,6 +4,17 @@ Current prototype is a CNN based on this [paper](https://arxiv.org/ftp/arxiv/pap
 
 ![image](https://user-images.githubusercontent.com/50050912/157023128-fa016fbe-f2c5-463e-b900-2120301690f2.png)
 
+
+# Getting Started
+
+Clone the repo and run the following command:
+
+    - python main.py --preprocessor True			
+
+This is set up to take data from the 'data' repository, by default it will take files called 'train.csv' and 'valid.csv' then train the BaseSentimentCNN,
+providing train and valid loss. It will then save the parameter values in the 'model_parameter' folder for the param configuration that achieved the lowest
+valid loss score.
+
 ### Dataset
 - The datasets used to train, validate and test the model(s) are listed below:
     
