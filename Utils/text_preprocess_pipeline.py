@@ -13,7 +13,7 @@ root_dir = os.getcwd().replace('\\', '/') + '/'
 
 
 def prepare_tensor_data(from_path, to_path, batch_size, text_col='review', label_col='sentiment', subsample=True,
-                        max_vocab_size=20000, sequence_length=40, tokenizer='nltk'):
+                        max_vocab_size=20000, sequence_length=40, tokenizer='nltk', drop_last=True):
     """
     Function to run pipeline that turns text, label dataset -> tensor dataset.
     :param from_path: the path and file to get the input dataset. Currently only reads from .csv file
@@ -29,6 +29,7 @@ def prepare_tensor_data(from_path, to_path, batch_size, text_col='review', label
     :param sequence_length: The length of the vector, once converted from text.
     :param tokenizer: the type of tokenizer to be used. Currently two options: ['standard', 'nltk'].
     :return: save the output torch.TensorDataset in the provided to_path.
+    :param drop_last: boolean, indicate whether to drop last batch.
     """
     data = pd.read_csv(from_path, sep=',').dropna(how="any")
 
@@ -51,4 +52,4 @@ def prepare_tensor_data(from_path, to_path, batch_size, text_col='review', label
     # create the tensor dataset and save it in to_path.
     torch.save(vectorizer.create_tensor_dataset(text_int_encoding, labels), to_path)
 
-    return vectorizer.load_tensor_data(batch_size=batch_size)
+    return vectorizer.load_tensor_data(batch_size=batch_size, drop_last=drop_last)

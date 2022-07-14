@@ -42,9 +42,8 @@ def train_sentimentCNN(model, train_loader, valid_loader, criterion, optimizer,
             optimizer.zero_grad()
             # forward pass: compute predicted outputs by passing inputs to the model
             output = model(data).reshape(target.shape[0], )
-            target = target.to(torch.float32)
             # calculate the batch loss
-            loss = criterion(output, target)
+            loss = criterion(output, target.float())
             # backward pass: compute gradient of the loss with respect to model parameters
             loss.backward()
             # perform a single optimization step (parameter update)
