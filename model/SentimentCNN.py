@@ -48,24 +48,32 @@ class BaseSentimentCNN(nn.Module):
 
     def forward(self, x):
         # add sequence of convolution and max pooling layers.
+        print("shape before embedding ", x.shape)
         x = self.embedding(x)
         x = x.reshape(self.batch_size, self.seq_length,
                       self.embedding_dim)  # reshape it to [batch, seq_length, 300 embedding size]
+        print("shape after embedding and reshape: ", x.shape)
 
         x = F.relu(self.conv1(x))
+        print("shape after conv1: ", x.shape)
         x = F.relu(self.conv2(x))
+        print("shape after conv2: ", x.shape)
         x = self.pool1(x)
+        print("shape after pool1: ", x.shape)
         x = F.relu(self.conv3(x))
+        print("shape after conv3: ", x.shape)
         x = F.relu(self.conv4(x))
+        print("shape after conv4: ", x.shape)
         x = self.avgpool(x)
-
+        print("shape after avgpool: ", x.shape)
         # flattening the output of the final pooling layer to feed the fully connected layer.
         x = x.view(x.shape[0] * x.shape[2], -1)
+        print("shape after flattening: ", x.shape)
         # dropout
         x = self.dropout(x)
         # fully connected layer
         x = self.fc(x)
-
+        print("shape after linear layer: ", x.shape)
         x = self.sig(x)
-
+        print("shape after sigmoid: ", x.shape)
         return x
