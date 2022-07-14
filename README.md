@@ -20,6 +20,7 @@ To run the model training script on the dataset of your choice, run the command 
     - python main.py --preprocessor True --train_set <you-train-data-file-name.csv> --valid_set <your-valid-data-file-name.csv>
     
 To train the DPCNN model run the following command:
+
     - python main.py --preprocessor True --model 'dpcnn'
 
 ### Dataset
