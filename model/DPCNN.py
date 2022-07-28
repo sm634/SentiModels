@@ -13,6 +13,10 @@ class DPCNN(BasicModule):
         super(DPCNN, self).__init__()
         self.config = config
         self.channel_size = 250
+        self.vocab_size = self.config.vocab_size
+        self.embedding_dim = self.config.word_embedding_dimension
+        self.embed = nn.Embedding(self.vocab_size, self.embedding_dim, padding_idx=0)
+
         self.conv_region_embedding = nn.Conv1d(in_channels=self.config.sequence_length, out_channels=self.channel_size,
                                                kernel_size=3, stride=1)
         self.conv3 = nn.Conv1d(in_channels=self.channel_size, out_channels=self.channel_size, kernel_size=3, stride=1)
@@ -26,6 +30,8 @@ class DPCNN(BasicModule):
 
     def forward(self, x):
         batch = self.config.batch_size
+
+        x = self.embed(x)
 
         x = self.conv_region_embedding(x)  # [batch_size, channel_size, length, 1]
 

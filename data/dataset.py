@@ -1,35 +1,59 @@
-from torch.utils.data import Dataset
 from typing import Union, List
+from data.labeled_reviews_data import BaseReviewsDataset
 import pandas as pd
-import os
-import re
 
 
-class TextDataset(Dataset):
-    def __init__(self,
-                 path,
-                 labels: Union[int, List[int]],
-                 split: str = "train"
-                 ):
+class ImdbReviewsDataset(BaseReviewsDataset):
+    """Imdb movies reviews dataset."""
 
-        self.labels = labels
-        self.filename = os.listdir(path)
-        if split.lower() == "train":
-            self.train_set = pd.read_csv(path + [file for file in self.filename if re.search('train', file)][0])
-        if split.lower() == "test":
-            self.test_set = pd.read_csv(path + [file for file in self.filename if re.search('test', file)][0])
-        if split.lower() == "val":
-            self.val_set = pd.read_csv(path + [file for file in self.filename if re.search('val', file)][0])
-
+    def __init__(self, file='imdb_reviews_data.csv', split=Union[bool, List[float]],
+                 review_col='review', label_col='sentiment'):
         """
-        : param path: the path to the data directory
-        : param labels: expects type int or list of ints as label
-        : param split: get either the train, test or val set. Currently expects a directory for a dataset with three
-        separate files for train.csv, test.csv and valid.csv.
+        :param file: the path to the dataset. Default to the data folder.
+        :param split: whether to split the dataset to train, val and test. When only provided bool, the default split
+        ration of train:val:test is 0.8:0.1:0.1.
+        :param review_col: name of column with reviews.
+        :param label_col: name of column with labels/sentiment.
         """
-
-    def __getitem__(self, index):
-        return self.train_set[index], self.labels[index]
+        super().__init__(file, split, review_col, label_col)
+        self.imdb_reviews = pd.read_csv(file)
+        self.labels_dict = {'negative': 0, 'positive': 1}
 
     def __len__(self):
-        return len(self.train_set)
+        return self.imdb_reviews.shape[0]
+
+    def __getitem__(self, index):
+        return self.imdb_reviews.iloc[index, :]
+
+
+class AmazonReviewPolarity(BaseReviewsDataset):
+    """Amazon Products reviews polarity dataset."""
+
+    def __init__(self, file='amazon_review_polarity.csv', split=Union[bool, List[float]],
+                 review_col='review', label_col='sentiment'):
+        """
+        :param file: the path to the dataset. Default to the data folder.
+        :param split: whether to split the dataset to train, val and test. When only provided bool, the default split
+        ration of train:val:test is 0.8:0.1:0.1.
+        :param review_col: name of column with reviews.
+        :param label_col: name of column with labels/sentiment.
+        """
+        super().__init__(file, split, review_col, label_col)
+        self.amazon_reviews = pd.read_csv(file, names=[label_col, 'title', review_col])
+        self.labels_dict = {1: 0, 2: 1}
+
+    def __len__(self):
+        return self.amazon_reviews.shape[0]
+
+    def __getitem__(self, index):
+        return self.amazon_reviews.iloc[index, :]
+
+
+# Use case example of the dataset class
+""" 
+imdb_reviews = ImdbReviewsDataset()
+imdb_reviews_data = imdb_reviews.dataset
+imdb_reviews.recode_labels()
+imdb_reviews.train_val_test_split()
+train_data = imdb_reviews.train
+"""

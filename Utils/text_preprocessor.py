@@ -11,6 +11,7 @@ import random
 from torch.utils.data import TensorDataset, DataLoader
 import torch
 import itertools
+import json
 
 
 class TextVectorizer:
@@ -25,11 +26,11 @@ class TextVectorizer:
             (v, k) for k, v in self.vocabulary.items()
         )
         self.padding_length = 40  # an attribute to pad vectors to a fixed length.
-        self.tensor_dataset = None
         self.word_count_dict = {}
         self.total_word_count = 0
         self.unique_word_count = 0
         self.tokenizer = 'nltk'
+        self.features = None
 
     def standardize(self, text):
         """
@@ -112,7 +113,7 @@ class TextVectorizer:
             max_restrict_vocab = []
             for text in sub_sampled_dataset:
                 tokens = self.tokenize(text, tokenizer=self.tokenizer)
-                max_restrict_vocab.append(' '.join([token for token in tokens if token in vocab])) # need to make
+                max_restrict_vocab.append(' '.join([token for token in tokens if token in vocab]))  # need to make
                 # more efficient.
 
             return max_restrict_vocab
@@ -144,6 +145,18 @@ class TextVectorizer:
                     self.vocabulary[token] = len(self.vocabulary)
             self.inverse_vocabulary = self.inverse_vocabulary
 
+    def save_vocabulary_lookup(self, file_name_path):
+        """
+        A function to save the vocabulary look up table (can be used for text encoding during inference).
+        :param file_name_path: the path and name of the file to save the lookup as. Default is to save in the
+        Utils directory.
+        :return: None
+        """
+        vocab_look_up = json.dumps(self.vocabulary)
+        with open(file_name_path, 'w') as f:
+            f.write(vocab_look_up)
+        f.close()
+
     def encode(self, text):
         """
         Encode the text
@@ -173,14 +186,25 @@ class TextVectorizer:
         # for each words vector, pad the vector to sequence_length.
         for i, row in enumerate(dataset):
             features[i, -len(row):] = np.array(row)[:sequence_length]
-        return features
+        self.features = features
+        return self.features
+
+
+class PrepareTensor:
+    """Abstracted methods for preparing tensors with Pytorch DataLoaders and TensorDataset"""
+    def __init__(self):
+        self.tensor_dataset = None
 
     def create_tensor_dataset(self, dataset_x: np.array, dataset_y: np.array):
         """
         :param dataset_x: the dataset, text.
         :param dataset_y: the dataset labels
-        :return:
+        :return: a pytorch tensor dataset.
         """
+        if not isinstance(dataset_x, np.ndarray) or not isinstance(dataset_y, np.ndarray):
+            dataset_x = np.array(dataset_x)
+            dataset_y = np.array(dataset_y)
+
         dataset_x = torch.from_numpy(dataset_x)
         dataset_y = torch.from_numpy(dataset_y)
         self.tensor_dataset = TensorDataset(dataset_x, dataset_y)
@@ -188,10 +212,3 @@ class TextVectorizer:
 
     def load_tensor_data(self, batch_size, drop_last=True):
         return DataLoader(self.tensor_dataset, batch_size=batch_size, drop_last=drop_last)
-
-
-def recode_sentiment_label(label: str, neg_label='negative', pos_label='positive'):
-    if label.lower() == neg_label:
-        return 0
-    elif label.lower() == pos_label:
-        return 1
