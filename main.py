@@ -1,14 +1,16 @@
+import TrainEval
 from Utils.text_preprocess_pipeline import prepare_tensor_data
+from Utils.text_preprocessor import TextVectorizer, PrepareTensor
+from data.dataset import ImdbReviewsDataset, AmazonReviewPolarity
 from torch import nn
 import torch
 from torch.utils.data import DataLoader
 import argparse
-from tqdm import tqdm
-import time
-
 from model.SentimentCNN import BaseSentimentCNN
 from model.DPCNN import DPCNN
-from TrainEval import train_sentimentCNN
+from TrainEval import train_model
+import ast
+from datetime import datetime
 # from helpers import logger
 from config import Config
 
@@ -18,20 +20,23 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--lr', type=float, default=0.01)
-    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--channel_size', type=int, default=250)
     parser.add_argument('--epoch', type=int, default=5)
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--out_channel', type=int, default=2)
     parser.add_argument('--vocab_size', type=int, default=30000)
-    parser.add_argument('--preprocess', type=bool, default=False)
+    parser.add_argument('--preprocess', type=str, choices=['true', 'false'])
+    parser.add_argument('--skip_train', type=str, choices=['true', 'false'])
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--train_set', type=str, default='train.csv')
-    parser.add_argument('--valid_set', type=str, default='valid.csv')
-    parser.add_argument('--model', type=str, default='BaseSentimentCNN')
-    parser.add_argument('--sequence_length', type=int, default=40)
+    parser.add_argument('--test_set', type=str, default='test.csv')
+    parser.add_argument('--model', type=str, choices=['BaseSentimentCNN', 'dpcnn'], default='BaseSentimentCNN')
+    parser.add_argument('--sequence_length', type=int, default=300)
     parser.add_argument('--linear_out', type=int, default=1)
+    parser.add_argument('--dropout', type=float, default=0.2)
     parser.add_argument('--word_embedding_dimension', type=int, default=300)
+    parser.add_argument('--dataset', type=str, choices=['imdb_reviews', 'amazon_polarity'], default='imdb_reviews')
+    parser.add_argument('--load_specific_param', type=str, choices=['true', 'false'], default='false')
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -43,116 +48,180 @@ def main():
                     learning_rate=args.lr,
                     epoch=args.epoch,
                     linear_out=args.linear_out,
-                    word_embedding_dimension=args.word_embedding_dimension)
+                    word_embedding_dimension=args.word_embedding_dimension,
+                    dropout=args.dropout)
 
-    #####################
-    # load in tensor data
-    #####################
+    preprocess = args.preprocess
+    skip_train = args.skip_train
 
-    # preprocess csv to prepare tensors for model input
-    train_set = args.train_set
-    valid_set = args.valid_set
+    ######################
+    # Load desired Dataset
+    ######################
 
-    if args.preprocess:
-        print("Preprocessing Started")
-        train_loader = prepare_tensor_data(from_path='data/' + train_set, to_path='data/train.pt',
-                                           batch_size=config.batch_size, text_col='review', label_col='sentiment',
-                                           subsample=True, max_vocab_size=config.vocab_size,
-                                           sequence_length=config.sequence_length, drop_last=True)
-        valid_loader = prepare_tensor_data(from_path='data/' + valid_set, to_path='data/valid.pt',
-                                           batch_size=config.batch_size, text_col='review',
-                                           label_col='sentiment', subsample=True, max_vocab_size=config.vocab_size,
-                                           sequence_length=config.sequence_length, drop_last=True)
+    if args.dataset == 'imdb_reviews':
+        dataset = ImdbReviewsDataset(file='data/imdb_reviews_data.csv')
+    elif args.dataset == 'amazon_polarity':
+        dataset = AmazonReviewPolarity()
     else:
-        # otherwise the file_name passed in the argument should be a .pt file with saved tensors.
-        train_loader = DataLoader('data/train.pt', batch_size=config.batch_size, drop_last=True)
-        valid_loader = DataLoader("data/valid.pt", batch_size=config.batch_size, drop_last=True)
+        raise 'Please choose a dataset from the choices available'
 
-    #######################
+    dataset.train_val_test_split()
+    train_set = dataset.train
+    valid_set = dataset.val
+
+    text_col = dataset.review_col
+    label_col = dataset.label_col
+
+    # save model parameters as after training.
+    time_stamp = str(datetime.now()).replace(' ', '_t_').replace('.', '_').replace(':', '-')
+    save_parameters_as = args.model + '_' + args.dataset + '_' + time_stamp
+
+    # the parameters to load after training.
+    load_parameters = save_parameters_as
+    # vocabulary lookup dictionary file to save and use
+    vocab_lookup_file = 'Utils/vocabulary_lookup' + '_' + args.dataset + '_' + time_stamp + '.json'
+
+    # If training model
+    if not skip_train == 'true':
+
+        ###########################################
+        # Vectorize text data and get tensor format
+        ###########################################
+
+        if preprocess == 'true':
+
+            print("Preprocessing Started")
+            train_loader = prepare_tensor_data(input_data=train_set,
+                                               to_path='data/train.pt',
+                                               path_to_save_vocab=vocab_lookup_file,
+                                               batch_size=config.batch_size,
+                                               text_col=text_col,
+                                               label_col=label_col,
+                                               subsample=True,
+                                               max_vocab_size=config.vocab_size,
+                                               sequence_length=config.sequence_length,
+                                               drop_last=True)
+
+            # Preparing Valid set.
+            vectorizer = TextVectorizer()
+
+            with open(vocab_lookup_file, 'r') as f:
+                vocab_look_up = ast.literal_eval(f.read())
+
+            vectorizer.vocabulary = vocab_look_up
+
+            # encode the model input text col.
+            valid_text_encoded = valid_set[text_col].apply(lambda text: vectorizer.encode(text))
+            # to have word to int encoding and tokenized into a list.
+            valid_text_list = valid_text_encoded.to_list()  # returns List[List[int]] after above operation.
+            valid_feature_padded = vectorizer.pad_features(valid_text_list, sequence_length=args.sequence_length)
+
+            print("Preprocessing Complete")
+
+            # initialise TensorPrepare to convert to tensor.
+            tensor_prep = PrepareTensor()
+            tensor_prep.create_tensor_dataset(valid_feature_padded, valid_set[label_col])
+            valid_loader = tensor_prep.load_tensor_data(batch_size=args.batch_size)
+
+        else:
+            # otherwise the file_name passed in the argument should be a .pt file with saved tensors.
+            train_loader = DataLoader(torch.load('data/train.pt'), batch_size=config.batch_size, drop_last=True)
+            valid_loader = DataLoader(torch.load("data/valid.pt"), batch_size=config.batch_size, drop_last=True)
+
+        print("tensor data loaded")
+
+        #######################
+        # Instantiate the model
+        #######################
+
+        if args.model.lower() == 'dpcnn':
+            model = DPCNN(config)
+            print(model)
+        else:
+            model = BaseSentimentCNN(config)
+            print(model)
+
+        ############################
+        # loss, optimizer, embedding
+        ############################
+
+        # loss and optimization functions
+        lr = config.lr  # learning rate to be used for the optimizer.
+
+        criterion = nn.BCELoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+        #################
+        # Train the model
+        #################
+
+        train_model(model, train_loader, valid_loader, criterion, optimizer,
+                    save_model_as=save_parameters_as, n_epochs=config.epoch)
+
+    ####################
+    # Evaluate the model
+    ####################
+
     # Instantiate the model
-    #######################
-
     if args.model.lower() == 'dpcnn':
         model = DPCNN(config)
-        print(model)
     else:
         model = BaseSentimentCNN(config)
 
-    # loss and optimization functions
-    lr = config.lr  # learning rate to be used for the optimizer.
-
-    criterion = nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-
-    #################
-    # Train the model
-    #################
-
-    if args.model.lower() == 'dpcnn':
-
-        embeds = nn.Embedding(config.vocab_size, config.word_embedding_dimension, padding_idx=0)
-
-        train_loss = 0
-        valid_loss = 0
-        for epoch in tqdm(range(config.epoch)):
-            t1 = time.time()
-            # train mode for model to update weights after each backward pass (backprop update)
-            model.train()
-            try:
-                count = 0
-                for X, label in train_loader:
-                    count += 1
-                    # clear the gradients of all optimized variables
-                    optimizer.zero_grad()
-
-                    input_data = embeds(X)
-                    out = model(input_data)
-
-                    if out.shape != label.shape:
-                        out = out.reshape(label.shape[0], )
-
-                    loss = criterion(out, label.float())
-                    # backward pass: compute gradient of the loss with respect to model parameters
-                    loss.backward()
-                    # perform a single optimization step (parameter update)
-                    optimizer.step()
-
-                    train_loss += loss.item() * X.size(0)
-                    count += 1
-            except IndexError:
-                pass
-            # change to eval mode for model to freeze weights
-            model.eval()
-
-            try:
-                for X, label in valid_loader:
-
-                    input_data = embeds(X)
-                    out = model(input_data)
-
-                    if out.shape != label.shape:
-                        out = out.reshape(label.shape[0], )
-
-                    loss = criterion(out, label.float())
-                    # store valid loss.
-                    valid_loss += loss.item() * X.size(0)
-
-                # Calculate average losses.
-                train_loss = train_loss / (len(train_loader.sampler) * 100)
-                valid_loss = valid_loss / (len(valid_loader.sampler) * 100)
-                print('Epoch: {} \tTraining Loss: {:.6f} \tValidation Loss: {:.6f}'.format(
-                    epoch, train_loss, valid_loss))
-
-                t2 = (time.time() - t1) / 60
-                print("Epoch {}".format(epoch) + " completed in: {:.3f}".format(t2), " minutes")
-            except IndexError:
-                pass
-
-        print("Done Training")
-
+    if args.load_specific_param == 'true':
+        load_parameters_version = 'model_parameters/BaseSentimentCNN_imdb_reviews_2022-07-27_t_23-08-18_925236'
+        vocab_lookup_file = 'Utils/vocabulary_lookup_imdb_reviews_2022-07-27_t_23-08-18_925236.json'
+        model.load_state_dict(torch.load(load_parameters_version))
+        print("hard coded version of parameters {} loaded.".format(load_parameters_version))
+        with open(vocab_lookup_file, 'r') as f:
+            vocab_look_up = ast.literal_eval(f.read())
+        print("vocab look up {} loaded".format(vocab_lookup_file))
     else:
-        train_sentimentCNN(model, train_loader, valid_loader, criterion, optimizer,
-                           save_model_as='imdb_subset_params', n_epochs=config.epoch)
+        # load the model parameters/weights that minimised validation set loss.
+        model.load_state_dict(torch.load('model_parameters/' + load_parameters))
+        print("model parameters from {} loaded".format(load_parameters))
+        with open(vocab_lookup_file, 'r') as f:
+            vocab_look_up = ast.literal_eval(f.read())
+        print("vocab look up {} loaded".format(vocab_lookup_file))
+
+    # test data to evaluate model performance against.
+    test_set = dataset.test
+    print(" test_set shape: ", test_set.shape)
+    vectorizer = TextVectorizer()
+    # get the correct vocabulary look up
+    vectorizer.vocabulary = vocab_look_up
+
+    # encode the model input text col.
+    test_text_encoded = test_set[text_col].apply(lambda text: vectorizer.encode(text))  # get test set review text
+    # to have word to int encoding and tokenized into a list.
+    test_text_list = test_text_encoded.to_list()  # returns List[List[int]] after above operation.
+    test_feature_padded = vectorizer.pad_features(test_text_list, sequence_length=args.sequence_length)
+
+    # initialise TensorPrepare to convert to tensor.
+    tensor_prep = PrepareTensor()
+    tensor_prep.create_tensor_dataset(test_feature_padded, test_set[label_col])
+    test_loader = tensor_prep.load_tensor_data(batch_size=args.batch_size, drop_last=True)
+
+    eval_metric = TrainEval.test_model(model, test_loader)  # rewrite this function.
+    print(eval_metric)  # save the evaluation score along with logger storing model hyperparameters.
+
+    # save model details for reproducibility.
+    with open('evaluation/evaluation_metrics_' + args.model + '_' +
+              str(datetime.now()).replace(' ', '_t_').replace(':', '-').replace('.', '-') + '.csv', 'w') as f:
+        f.write("evaluation metric," + str(eval_metric) + '\n')
+        f.write("dataset," + args.dataset + '\n')
+        f.write("model," + str(model) + '\n')
+        f.write("config," + str({'--lr': args.lr,
+                                 '--batch_size': args.batch_size,
+                                 '--epoch': args.epoch,
+                                 '--vocab_size': args.vocab_size,
+                                 '--vocab_lookup': vocab_lookup_file,
+                                 '--params': load_parameters,
+                                 '--sequence_length': args.sequence_length,
+                                 '--linear_out': args.linear_out,
+                                 '--word_embedding_dimension': args.word_embedding_dimension
+                                 }
+                                ))
 
 
 if __name__ == "__main__":
