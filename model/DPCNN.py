@@ -23,7 +23,7 @@ class DPCNN(BasicModule):
         self.pooling = nn.MaxPool1d(kernel_size=3, stride=2)
         self.padding_conv = nn.ZeroPad2d((1, 1, 0, 0))
         self.padding_pool = nn.ZeroPad2d((0, 0, 0, 1))
-        self.act_fun = nn.ReLU()
+        self.act_fun = nn.LeakyReLU()
         self.linear_out = nn.Linear(self.channel_size, config.linear_out)
         self.sigmoid = nn.Sigmoid()
         self.dropout = nn.Dropout(config.dropout)
@@ -56,7 +56,7 @@ class DPCNN(BasicModule):
         return x
 
     def _block(self, x):
-        # Pooling - downsample for equal factor in linear combination.
+        # Pooling - down sample for equal factor in linear combination.
         px = self.pooling(x)
 
         # Convolution

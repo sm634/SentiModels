@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 import argparse
 from model.SentimentCNN import BaseSentimentCNN
 from model.DPCNN import DPCNN
+from model.DPCNNV1 import DPCNNV1
 from TrainEval import train_model
 import ast
 from datetime import datetime
@@ -30,7 +31,8 @@ def main():
     parser.add_argument('--skip_train', type=str, choices=['true', 'false'])
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--test_set', type=str, default='test.csv')
-    parser.add_argument('--model', type=str, choices=['BaseSentimentCNN', 'dpcnn'], default='BaseSentimentCNN')
+    parser.add_argument('--model', type=str, choices=['BaseSentimentCNN', 'dpcnn', 'dpcnnv1'],
+                        default='BaseSentimentCNN')
     parser.add_argument('--sequence_length', type=int, default=300)
     parser.add_argument('--linear_out', type=int, default=1)
     parser.add_argument('--dropout', type=float, default=0.2)
@@ -137,6 +139,9 @@ def main():
         if args.model.lower() == 'dpcnn':
             model = DPCNN(config)
             print(model)
+        elif args.model.lower() == 'dpcnnv1':
+            model = DPCNNV1(config)
+            print(model)
         else:
             model = BaseSentimentCNN(config)
             print(model)
@@ -165,12 +170,15 @@ def main():
     # Instantiate the model
     if args.model.lower() == 'dpcnn':
         model = DPCNN(config)
+    elif args.model.lower() == 'dpcnnv1':
+        model = DPCNNV1(config)
+        print(model)
     else:
         model = BaseSentimentCNN(config)
 
     if args.load_specific_param == 'true':
-        load_parameters_version = 'model_parameters/BaseSentimentCNN_imdb_reviews_2022-07-27_t_23-08-18_925236'
-        vocab_lookup_file = 'Utils/vocabulary_lookup_imdb_reviews_2022-07-27_t_23-08-18_925236.json'
+        load_parameters_version = 'model_parameters/dpcnnv1_imdb_reviews_2022-07-31_t_00-06-58_475214'
+        vocab_lookup_file = 'Utils/vocabulary_lookup_imdb_reviews_2022-07-30_t_23-43-02_521416.json'
         model.load_state_dict(torch.load(load_parameters_version))
         print("hard coded version of parameters {} loaded.".format(load_parameters_version))
         with open(vocab_lookup_file, 'r') as f:
@@ -219,7 +227,8 @@ def main():
                                  '--params': load_parameters,
                                  '--sequence_length': args.sequence_length,
                                  '--linear_out': args.linear_out,
-                                 '--word_embedding_dimension': args.word_embedding_dimension
+                                 '--word_embedding_dimension': args.word_embedding_dimension,
+                                 '--dropout': args.dropout
                                  }
                                 ))
 
