@@ -147,7 +147,8 @@ def test_model(model, test_loader, embeds=None):
             target = target.float()  # convert target to float
 
             # convert output probabilities to predicted class (0 or 1)
-            prediction = torch.round(output.squeeze())  # rounds to the nearest integer
+            # prediction = torch.round(output.squeeze())  # rounds to the nearest integer
+            prediction = torch.round(output)
 
             # concatenate the predictions and labels from the test_loader to get them all
             all_predictions = torch.cat((all_predictions, prediction.cpu()))
