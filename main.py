@@ -4,11 +4,11 @@ from Utils.text_preprocessor import TextVectorizer, PrepareTensor
 from data.dataset import ImdbReviewsDataset, AmazonReviewPolarity
 from torch import nn
 import torch
+import numpy as np
 from torch.utils.data import DataLoader
 import argparse
 from model.SentimentCNN import BaseSentimentCNN
 from model.DPCNN import DPCNN
-from model.DPCNNV1 import DPCNNV1
 from TrainEval import train_model
 import ast
 from datetime import datetime
@@ -31,7 +31,7 @@ def main():
     parser.add_argument('--skip_train', type=str, choices=['true', 'false'])
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--test_set', type=str, default='test.csv')
-    parser.add_argument('--model', type=str, choices=['BaseSentimentCNN', 'dpcnn', 'dpcnnv1'],
+    parser.add_argument('--model', type=str, choices=['BaseSentimentCNN', 'dpcnn'],
                         default='BaseSentimentCNN')
     parser.add_argument('--sequence_length', type=int, default=300)
     parser.add_argument('--linear_out', type=int, default=1)
@@ -43,7 +43,7 @@ def main():
 
     torch.manual_seed(args.seed)
 
-    # Create the configuration
+    # Create the configuration for model hyperparameters
     config = Config(sequence_length=args.sequence_length,
                     batch_size=args.batch_size,
                     vocab_size=args.vocab_size,
@@ -63,16 +63,31 @@ def main():
     if args.dataset == 'imdb_reviews':
         dataset = ImdbReviewsDataset(file='data/imdb_reviews_data.csv')
     elif args.dataset == 'amazon_polarity':
-        dataset = AmazonReviewPolarity()
+        dataset = AmazonReviewPolarity(file='data/amazon_review_polarity.csv')
     else:
         raise 'Please choose a dataset from the choices available'
 
     dataset.train_val_test_split()
-    train_set = dataset.train
-    valid_set = dataset.val
+    print(args.dataset + 'dataset loaded')
+    train_set = dataset.train.dropna(how='any')
+    valid_set = dataset.val.dropna(how='any')
+    print('train and validation dataset split complete')
 
     text_col = dataset.review_col
     label_col = dataset.label_col
+
+    # temp condition for amazon polarity dataset
+    sample_size_per_polarity = 500000
+    if args.dataset == 'amazon_polarity':
+        pos_train = train_set.loc[train_set[label_col] == 1].sample(sample_size_per_polarity)
+        neg_train = train_set.loc[train_set[label_col] == 0].sample(sample_size_per_polarity)
+        train_set = pos_train.append(neg_train).sample(frac=1)
+
+        pos_val = valid_set.loc[valid_set[label_col] == 1].sample(frac=0.5)
+        neg_val = valid_set.loc[valid_set[label_col] == 0].sample(frac=0.5)
+        valid_set = pos_val.append(neg_val).sample(frac=1)
+        print("ama_pol sub train set shape: ", train_set.shape)
+        print("ama_pol sub valid set shape: ", valid_set.shape)
 
     # save model parameters as after training.
     time_stamp = str(datetime.now()).replace(' ', '_t_').replace('.', '_').replace(':', '-')
@@ -115,15 +130,23 @@ def main():
             # encode the model input text col.
             valid_text_encoded = valid_set[text_col].apply(lambda text: vectorizer.encode(text))
             # to have word to int encoding and tokenized into a list.
-            valid_text_list = valid_text_encoded.to_list()  # returns List[List[int]] after above operation.
-            valid_feature_padded = vectorizer.pad_features(valid_text_list, sequence_length=args.sequence_length)
-
+            valid_text_encoded_list = valid_text_encoded.to_list()  # returns List[List[int]] after above operation.
+            # remove empty features.
+            valid_label_col = valid_set[label_col].to_list()
+            idx_to_drop = [i for i, text in enumerate(valid_text_encoded_list) if len(text) == 0]
+            print("no. of text samples prior to dropping empty features: ", len(valid_text_encoded_list),
+                  "\nindexes to drop: ", idx_to_drop)
+            valid_text_int_encoding = [text for i, text in enumerate(valid_text_encoded_list) if i not in idx_to_drop]
+            valid_labels = [label for i, label in enumerate(valid_label_col) if i not in idx_to_drop]
+            assert len(valid_text_int_encoding) == len(valid_labels)
+            valid_feature_padded = vectorizer.pad_features(valid_text_int_encoding, sequence_length=args.sequence_length)
+            valid_labels = np.array(valid_labels)
             print("Preprocessing Complete")
 
             # initialise TensorPrepare to convert to tensor.
             tensor_prep = PrepareTensor()
-            tensor_prep.create_tensor_dataset(valid_feature_padded, valid_set[label_col])
-            valid_loader = tensor_prep.load_tensor_data(batch_size=args.batch_size)
+            tensor_prep.create_tensor_dataset(valid_feature_padded, valid_labels)
+            valid_loader = tensor_prep.load_tensor_data(batch_size=args.batch_size, drop_last=True)
 
         else:
             # otherwise the file_name passed in the argument should be a .pt file with saved tensors.
@@ -138,9 +161,6 @@ def main():
 
         if args.model.lower() == 'dpcnn':
             model = DPCNN(config)
-            print(model)
-        elif args.model.lower() == 'dpcnnv1':
-            model = DPCNNV1(config)
             print(model)
         else:
             model = BaseSentimentCNN(config)
@@ -170,15 +190,14 @@ def main():
     # Instantiate the model
     if args.model.lower() == 'dpcnn':
         model = DPCNN(config)
-    elif args.model.lower() == 'dpcnnv1':
-        model = DPCNNV1(config)
         print(model)
     else:
         model = BaseSentimentCNN(config)
+        print(model)
 
     if args.load_specific_param == 'true':
-        load_parameters_version = 'model_parameters/dpcnnv1_imdb_reviews_2022-07-31_t_00-06-58_475214'
-        vocab_lookup_file = 'Utils/vocabulary_lookup_imdb_reviews_2022-07-30_t_23-43-02_521416.json'
+        load_parameters_version = 'model_parameters/dpcnn_amazon_polarity_2022-08-05_t_09-08-23_505992'
+        vocab_lookup_file = 'Utils/vocabulary_lookup_amazon_polarity_2022-08-05_t_09-08-23_505992.json'
         model.load_state_dict(torch.load(load_parameters_version))
         print("hard coded version of parameters {} loaded.".format(load_parameters_version))
         with open(vocab_lookup_file, 'r') as f:
@@ -194,7 +213,15 @@ def main():
 
     # test data to evaluate model performance against.
     test_set = dataset.test
-    print(" test_set shape: ", test_set.shape)
+    test_set = test_set.dropna(axis=0, how='any')
+
+    test_sample = 10000
+    if args.dataset == 'amazon_polarity':
+        test_set = test_set.iloc[:test_sample, :]
+        print(" ama_pol sub test set shape: ", test_set.shape)
+    else:
+        print(" test_set shape: ", test_set.shape)
+
     vectorizer = TextVectorizer()
     # get the correct vocabulary look up
     vectorizer.vocabulary = vocab_look_up
@@ -209,6 +236,7 @@ def main():
     tensor_prep = PrepareTensor()
     tensor_prep.create_tensor_dataset(test_feature_padded, test_set[label_col])
     test_loader = tensor_prep.load_tensor_data(batch_size=args.batch_size, drop_last=True)
+    print("test set tensor created.")
 
     eval_metric = TrainEval.test_model(model, test_loader)  # rewrite this function.
     print(eval_metric)  # save the evaluation score along with logger storing model hyperparameters.

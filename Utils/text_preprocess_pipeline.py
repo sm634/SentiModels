@@ -4,9 +4,9 @@ Run this to prepare a sentiment analysis dataset to feed into model.
 : Returns vector encoded tensors of the data to feed into the model.
     - Future versions: will also include the option to train the embeddings using gensim.
 """
-import pandas as pd
 import torch
 from Utils.text_preprocessor import TextVectorizer, PrepareTensor
+import numpy as np
 import os
 
 root_dir = os.getcwd().replace('\\', '/') + '/'
@@ -19,6 +19,7 @@ def prepare_tensor_data(input_data, to_path, path_to_save_vocab, batch_size, tex
     :param input_data: The input DataFrame.
     :param to_path: the path and file_name to save the output tensor dataset. Save as a .pt file to load using
     torch.utils.data DataLoader.
+    :param path_to_save_vocab: The path in which to save the lookup vocab dictionary/table.
     :param batch_size: batch size of the tensor data to be loaded.
     :param text_col: the name of the column where the text data is stored.
     :param label_col: the name of the column where the labels are stored. These have to be numerical (int) and the
@@ -35,7 +36,7 @@ def prepare_tensor_data(input_data, to_path, path_to_save_vocab, batch_size, tex
 
     # extract text and label data to work with.
     text_data = data[text_col].to_list()
-    labels = data[label_col].to_numpy()
+    labels = data[label_col].to_list()
 
     # initialize text vectorizer.
     vectorizer = TextVectorizer()
@@ -55,12 +56,23 @@ def prepare_tensor_data(input_data, to_path, path_to_save_vocab, batch_size, tex
     print("vocabulary look up table created and saved in " + path_to_save_vocab)
     # encode the text data into ints from the created vocabulary lookup table.
     text_int_encoding = [vectorizer.encode(text) for text in text_data]
+
+    # remove empty features.
+    idx_to_drop = [i for i, text in enumerate(text_int_encoding) if len(text) == 0]
+    print("no. of text samples prior to dropping empty features: ", len(text_int_encoding),
+          "\nindexes to drop: ", idx_to_drop)
+    text_int_encoding = [text for i, text in enumerate(text_int_encoding) if i not in idx_to_drop]
+    labels = [label for i, label in enumerate(labels) if i not in idx_to_drop]
+    assert len(text_int_encoding) == len(labels)
+    print("no. of data samples after dropping empty features: ", len(text_int_encoding))
+
     # pad the text_int_encoding.
     text_int_encoding_pad = vectorizer.pad_features(text_int_encoding, sequence_length=sequence_length)
 
     # initialise tensor preparing class.
     prepare_tensor = PrepareTensor()
     # create the tensor dataset and save it in to_path.
+    labels = np.array(labels)
     torch.save(prepare_tensor.create_tensor_dataset(dataset_x=text_int_encoding_pad, dataset_y=labels), to_path)
 
     print("tensor data prepared and saved to " + to_path)
