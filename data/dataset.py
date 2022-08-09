@@ -16,14 +16,14 @@ class ImdbReviewsDataset(BaseReviewsDataset):
         :param label_col: name of column with labels/sentiment.
         """
         super().__init__(file, split, review_col, label_col)
-        self.imdb_reviews = pd.read_csv(file)
+        self.dataset = pd.read_csv(file)
         self.labels_dict = {'negative': 0, 'positive': 1}
 
     def __len__(self):
-        return self.imdb_reviews.shape[0]
+        return self.dataset.shape[0]
 
     def __getitem__(self, index):
-        return self.imdb_reviews.iloc[index, :]
+        return self.dataset.iloc[index, :]
 
 
 class AmazonReviewPolarity(BaseReviewsDataset):
@@ -39,14 +39,15 @@ class AmazonReviewPolarity(BaseReviewsDataset):
         :param label_col: name of column with labels/sentiment.
         """
         super().__init__(file, split, review_col, label_col)
-        self.amazon_reviews = pd.read_csv(file, names=[label_col, 'title', review_col])
+        self.dataset = pd.read_csv(file, names=[label_col, 'title', review_col])
+        self.dataset = self.dataset[[label_col, review_col]]
         self.labels_dict = {1: 0, 2: 1}
 
     def __len__(self):
-        return self.amazon_reviews.shape[0]
+        return self.dataset.shape[0]
 
     def __getitem__(self, index):
-        return self.amazon_reviews.iloc[index, :]
+        return self.dataset.iloc[index, :]
 
 
 # Use case example of the dataset class
