@@ -14,6 +14,9 @@ import ast
 from datetime import datetime
 # from helpers import logger
 from config import Config
+from logger import log_standard_info
+
+info_logger = log_standard_info('main_script')
 
 
 def main():
@@ -68,10 +71,10 @@ def main():
         raise 'Please choose a dataset from the choices available'
 
     dataset.train_val_test_split()
-    print(args.dataset + 'dataset loaded')
+    info_logger.info(args.dataset + 'dataset loaded')
     train_set = dataset.train.dropna(how='any')
     valid_set = dataset.val.dropna(how='any')
-    print('train and validation dataset split complete')
+    info_logger.info('train and validation dataset split complete')
 
     text_col = dataset.review_col
     label_col = dataset.label_col
@@ -86,8 +89,9 @@ def main():
         pos_val = valid_set.loc[valid_set[label_col] == 1].sample(frac=0.5)
         neg_val = valid_set.loc[valid_set[label_col] == 0].sample(frac=0.5)
         valid_set = pos_val.append(neg_val).sample(frac=1)
-        print("ama_pol sub train set shape: ", train_set.shape)
-        print("ama_pol sub valid set shape: ", valid_set.shape)
+
+        info_logger.info("ama_pol sub train set shape: ", train_set.shape)
+        info_logger.info("ama_pol sub valid set shape: ", valid_set.shape)
 
     # save model parameters as after training.
     time_stamp = str(datetime.now()).replace(' ', '_t_').replace('.', '_').replace(':', '-')
@@ -107,7 +111,7 @@ def main():
 
         if preprocess == 'true':
 
-            print("Preprocessing Started")
+            info_logger.info("Preprocessing Started")
             train_loader = prepare_tensor_data(input_data=train_set,
                                                to_path='data/train.pt',
                                                path_to_save_vocab=vocab_lookup_file,
@@ -134,14 +138,17 @@ def main():
             # remove empty features.
             valid_label_col = valid_set[label_col].to_list()
             idx_to_drop = [i for i, text in enumerate(valid_text_encoded_list) if len(text) == 0]
-            print("no. of text samples prior to dropping empty features: ", len(valid_text_encoded_list),
-                  "\nindexes to drop: ", idx_to_drop)
+
+            info_logger.info("no. of text samples prior to dropping empty features: ", len(valid_text_encoded_list),
+                             "\nindexes to drop: ", idx_to_drop)
+
             valid_text_int_encoding = [text for i, text in enumerate(valid_text_encoded_list) if i not in idx_to_drop]
             valid_labels = [label for i, label in enumerate(valid_label_col) if i not in idx_to_drop]
             assert len(valid_text_int_encoding) == len(valid_labels)
-            valid_feature_padded = vectorizer.pad_features(valid_text_int_encoding, sequence_length=args.sequence_length)
+            valid_feature_padded = vectorizer.pad_features(valid_text_int_encoding,
+                                                           sequence_length=args.sequence_length)
             valid_labels = np.array(valid_labels)
-            print("Preprocessing Complete")
+            info_logger.info("Preprocessing Complete")
 
             # initialise TensorPrepare to convert to tensor.
             tensor_prep = PrepareTensor()
@@ -153,7 +160,7 @@ def main():
             train_loader = DataLoader(torch.load('data/train.pt'), batch_size=config.batch_size, drop_last=True)
             valid_loader = DataLoader(torch.load("data/valid.pt"), batch_size=config.batch_size, drop_last=True)
 
-        print("tensor data loaded")
+        info_logger.info("tensor data loaded")
 
         #######################
         # Instantiate the model
@@ -161,10 +168,10 @@ def main():
 
         if args.model.lower() == 'dpcnn':
             model = DPCNN(config)
-            print(model)
+            info_logger.info(model)
         else:
             model = BaseSentimentCNN(config)
-            print(model)
+            info_logger.info(model)
 
         ############################
         # loss, optimizer, embedding
@@ -190,26 +197,32 @@ def main():
     # Instantiate the model
     if args.model.lower() == 'dpcnn':
         model = DPCNN(config)
-        print(model)
+        info_logger.info(model)
     else:
         model = BaseSentimentCNN(config)
-        print(model)
+        info_logger.info(model)
 
     if args.load_specific_param == 'true':
         load_parameters_version = 'model_parameters/dpcnn_amazon_polarity_2022-08-05_t_09-08-23_505992'
         vocab_lookup_file = 'Utils/vocabulary_lookup_amazon_polarity_2022-08-05_t_09-08-23_505992.json'
         model.load_state_dict(torch.load(load_parameters_version))
-        print("hard coded version of parameters {} loaded.".format(load_parameters_version))
+
+        info_logger.info("hard coded version of parameters {} loaded.".format(load_parameters_version))
+
         with open(vocab_lookup_file, 'r') as f:
             vocab_look_up = ast.literal_eval(f.read())
-        print("vocab look up {} loaded".format(vocab_lookup_file))
+
+        info_logger.info("vocab look up {} loaded".format(vocab_lookup_file))
     else:
         # load the model parameters/weights that minimised validation set loss.
         model.load_state_dict(torch.load('model_parameters/' + load_parameters))
-        print("model parameters from {} loaded".format(load_parameters))
+
+        info_logger.info("model parameters from {} loaded".format(load_parameters))
+
         with open(vocab_lookup_file, 'r') as f:
             vocab_look_up = ast.literal_eval(f.read())
-        print("vocab look up {} loaded".format(vocab_lookup_file))
+
+        info_logger.info("vocab look up {} loaded".format(vocab_lookup_file))
 
     # test data to evaluate model performance against.
     test_set = dataset.test
@@ -218,9 +231,10 @@ def main():
     test_sample = 10000
     if args.dataset == 'amazon_polarity':
         test_set = test_set.iloc[:test_sample, :]
-        print(" ama_pol sub test set shape: ", test_set.shape)
+
+        info_logger.info(" ama_pol sub test set shape: ", test_set.shape)
     else:
-        print(" test_set shape: ", test_set.shape)
+        info_logger.info(" test_set shape: ", test_set.shape)
 
     vectorizer = TextVectorizer()
     # get the correct vocabulary look up
@@ -236,10 +250,12 @@ def main():
     tensor_prep = PrepareTensor()
     tensor_prep.create_tensor_dataset(test_feature_padded, test_set[label_col])
     test_loader = tensor_prep.load_tensor_data(batch_size=args.batch_size, drop_last=True)
-    print("test set tensor created.")
+
+    info_logger.info("test set tensor created.")
 
     eval_metric = TrainEval.test_model(model, test_loader)  # rewrite this function.
-    print(eval_metric)  # save the evaluation score along with logger storing model hyperparameters.
+
+    info_logger.info(eval_metric)  # save the evaluation score along with logger storing model hyperparameters.
 
     # save model details for reproducibility.
     with open('evaluation/evaluation_metrics_' + args.model + '_' +
